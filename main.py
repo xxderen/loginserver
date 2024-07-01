@@ -5,6 +5,7 @@ import io, json
 from typing import List
 from pydantic import BaseModel
 import hashlib
+import uuid
 
 def hash_password(password):
         h = hashlib.new("sha3_512")
@@ -13,12 +14,14 @@ def hash_password(password):
 class User:
         Id: int
         Username: str
-        Password: str     
+        Password: str 
+        Uuid: str    
 
-        def __init__(self, id, username, password):
+        def __init__(self, id, username, password, uuid):
                 self.Id = id
                 self.Username = username
                 self.Password = password
+                self.Uuid = uuid
 
 class UpdateUser(BaseModel):
         Password: str
@@ -40,7 +43,7 @@ def read_root():
 def login(loginuser: NewUser):
         users = getUsersFromJson()
         for user in users:
-                if user.Username == loginuser.Username and user.Password == hash_password(loginuser.Password):
+                if user.Username == loginuser.Username and user.Password == hash_password(loginuser.Password + user.Uuid):
                         return JSONResponse(user.Id)
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -61,10 +64,10 @@ def update_user(user_id: int, updateUser: UpdateUser):
 
         for user in users:
                 if (user.Id == user_id):
-                        if user.Password == hash_password(updateUser.Password):
+                        if user.Password == hash_password(updateUser.Password + user.Uuid):
                                 raise HTTPException(status_code=400, detail="Password is the same")
                         else:
-                                user.Password = hash_password(updateUser.Password)
+                                user.Password = hash_password(updateUser.Password + user.Uuid)
 
                         writeUsersToJson(users)
                         return JSONResponse("")
@@ -90,8 +93,10 @@ def write_root(newuser: NewUser):
                 if user.Username == newuser.Username:
                         raise HTTPException(status_code=404, detail="Username already exists")
         new_id = max([user.Id for user in users], default=0) + 1
+        user_uuid = str(uuid.uuid4())
+        newuser.Password = newuser.Password + user_uuid
         newuser.Password = hash_password(newuser.Password)
-        users.append(User(new_id,newuser.Username,newuser.Password))
+        users.append(User(new_id,newuser.Username,newuser.Password,user_uuid))
         writeUsersToJson(users)
         return JSONResponse("")
 
@@ -102,7 +107,7 @@ def getUsersFromJson():
 
         users: List[User] = []
         for entry in data:
-                users.append(User(entry["Id"], entry["Username"], entry["Password"]))
+                users.append(User(entry["Id"], entry["Username"], entry["Password"], entry["Uuid"]))
 
         return users
 
