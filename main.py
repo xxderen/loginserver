@@ -6,7 +6,7 @@ from typing import List
 from pydantic import BaseModel
 import hashlib
 import uuid
-
+admin_level = 1
 def hash_password(password):
         h = hashlib.new("sha3_512")
         h.update(password.encode("utf-8"))
@@ -62,6 +62,16 @@ def login(loginuser: NewUser):
                         return JSONResponse(user.Id)
         raise HTTPException(status_code=404, detail="User not found")
 
+@app.get("/user/admin")
+def read_admin():
+        users = getSafeUsersFromJson()
+
+        for user in users:
+                if user.Level == admin_level:
+                        json_compatible_item_data = jsonable_encoder(user)
+                        return JSONResponse(content=json_compatible_item_data)
+        raise HTTPException(status_code=404, detail="Admin not found")
+
 @app.get("/user/{user_id}")
 def read_root(user_id: int):
         users = getSafeUsersFromJson()
@@ -97,9 +107,12 @@ def delete_user(user_id: int):
         for user in users:
                 if (user.Id == user_id):
                         users.remove(user)
+                        writeUsersToJson(users)
+                        return JSONResponse("")
+        raise HTTPException(status_code=404, detail="Item not found")
+        
 
-        writeUsersToJson(users)
-        return JSONResponse("")
+        
 
 @app.post("/user")
 def write_root(newuser: NewUser):
