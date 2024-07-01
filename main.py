@@ -7,6 +7,7 @@ from pydantic import BaseModel
 import hashlib
 import uuid
 admin_level = 1
+user_level = 0
 def hash_password(password):
         h = hashlib.new("sha3_512")
         h.update(password.encode("utf-8"))
@@ -125,9 +126,9 @@ def write_root(newuser: NewUser):
         newuser.Password = newuser.Password + user_uuid
         newuser.Password = hash_password(newuser.Password)
         if newuser.Username == "admin":
-                newuser.Level = 1
+                newuser.Level = admin_level
         else:
-                newuser.Level = 0
+                newuser.Level = user_level
         users.append(User(new_id,newuser.Username,newuser.Password,user_uuid,newuser.Level))
         writeUsersToJson(users)
         return JSONResponse("")
