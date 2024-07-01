@@ -16,25 +16,34 @@ class User:
         Username: str
         Password: str 
         Uuid: str    
+        Level: int
 
-        def __init__(self, id, username, password, uuid):
+        def __init__(self, id, username, password, uuid, level):
                 self.Id = id
                 self.Username = username
                 self.Password = password
                 self.Uuid = uuid
+                self.Level = level
 class SafeUser:
         Id: int
         Username: str
+        Level: int
 
-        def __init__(self, id, username):
+        def __init__(self, id, username, level):
                 self.Id = id
                 self.Username = username
+                self.Level = level
 class UpdateUser(BaseModel):
         Password: str
+class Admin(BaseModel):
+        Id: int
+        Username: str
+        Level: int
 
 class NewUser(BaseModel):
         Username: str
         Password: str
+        Level: int = 0
 
 app = FastAPI()
 
@@ -102,7 +111,11 @@ def write_root(newuser: NewUser):
         user_uuid = str(uuid.uuid4())
         newuser.Password = newuser.Password + user_uuid
         newuser.Password = hash_password(newuser.Password)
-        users.append(User(new_id,newuser.Username,newuser.Password,user_uuid))
+        if newuser.Username == "admin":
+                newuser.Level = 1
+        else:
+                newuser.Level = 0
+        users.append(User(new_id,newuser.Username,newuser.Password,user_uuid,newuser.Level))
         writeUsersToJson(users)
         return JSONResponse("")
 
@@ -113,16 +126,17 @@ def getUsersFromJson():
 
         users: List[User] = []
         for entry in data:
-                users.append(User(entry["Id"], entry["Username"], entry["Password"], entry["Uuid"]))
+                users.append(User(entry["Id"], entry["Username"], entry["Password"], entry["Uuid"], entry["Level"]))
 
         return users
+
 def getSafeUsersFromJson():
         with io.open('data.txt', 'r', encoding='utf-8') as f:
                 data = json.loads(f.read())
         
         users: List[SafeUser] = []
         for entry in data:
-                users.append(SafeUser(entry["Id"], entry["Username"]))
+                users.append(SafeUser(entry["Id"], entry["Username"], entry["Level"]))
         return users                             
 
 def writeUsersToJson(users):
