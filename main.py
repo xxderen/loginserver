@@ -4,7 +4,12 @@ from fastapi.responses import JSONResponse
 import io, json
 from typing import List
 from pydantic import BaseModel
+import hashlib
 
+def hash_password(password):
+        h = hashlib.new("sha3_512")
+        h.update(password.encode("utf-8"))
+        return h.hexdigest()
 class User:
         Id: int
         Username: str
@@ -35,7 +40,7 @@ def read_root():
 def login(loginuser: NewUser):
         users = getUsersFromJson()
         for user in users:
-                if user.Username == loginuser.Username and user.Password == loginuser.Password:
+                if user.Username == loginuser.Username and user.Password == hash_password(loginuser.Password):
                         return JSONResponse(user.Id)
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -56,10 +61,10 @@ def update_user(user_id: int, updateUser: UpdateUser):
 
         for user in users:
                 if (user.Id == user_id):
-                        if user.Password == updateUser.Password:
+                        if user.Password == hash_password(updateUser.Password):
                                 raise HTTPException(status_code=400, detail="Password is the same")
                         else:
-                                user.Password = updateUser.Password
+                                user.Password = hash_password(updateUser.Password)
 
                         writeUsersToJson(users)
                         return JSONResponse("")
@@ -85,6 +90,7 @@ def write_root(newuser: NewUser):
                 if user.Username == newuser.Username:
                         raise HTTPException(status_code=404, detail="Username already exists")
         new_id = max([user.Id for user in users], default=0) + 1
+        newuser.Password = hash_password(newuser.Password)
         users.append(User(new_id,newuser.Username,newuser.Password))
         writeUsersToJson(users)
         return JSONResponse("")
