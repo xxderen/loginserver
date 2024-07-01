@@ -22,7 +22,13 @@ class User:
                 self.Username = username
                 self.Password = password
                 self.Uuid = uuid
+class SafeUser:
+        Id: int
+        Username: str
 
+        def __init__(self, id, username):
+                self.Id = id
+                self.Username = username
 class UpdateUser(BaseModel):
         Password: str
 
@@ -34,7 +40,7 @@ app = FastAPI()
 
 @app.get("/user")
 def read_root():
-        users = getUsersFromJson()
+        users = getSafeUsersFromJson()
         json_compatible_item_data = jsonable_encoder(users)
         return JSONResponse(content=json_compatible_item_data)               
 
@@ -49,7 +55,7 @@ def login(loginuser: NewUser):
 
 @app.get("/user/{user_id}")
 def read_root(user_id: int):
-        users = getUsersFromJson()
+        users = getSafeUsersFromJson()
         
         for user in users:
                 if (user.Id == user_id):
@@ -110,6 +116,14 @@ def getUsersFromJson():
                 users.append(User(entry["Id"], entry["Username"], entry["Password"], entry["Uuid"]))
 
         return users
+def getSafeUsersFromJson():
+        with io.open('data.txt', 'r', encoding='utf-8') as f:
+                data = json.loads(f.read())
+        
+        users: List[SafeUser] = []
+        for entry in data:
+                users.append(SafeUser(entry["Id"], entry["Username"]))
+        return users                             
 
 def writeUsersToJson(users):
         json_compatible_item_data = jsonable_encoder(users)
